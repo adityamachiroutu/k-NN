@@ -12,6 +12,7 @@
 package org.opensearch.knn.jni;
 
 import com.sun.jna.Platform;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -27,6 +28,7 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.stream.Stream;
 
+@Log4j2
 public class PlatformUtils {
     private static final Logger logger = LogManager.getLogger(PlatformUtils.class);
 
@@ -103,6 +105,18 @@ public class PlatformUtils {
             isAVX512Supported = areAVX512FlagsAvailable(new String[] { "avx512f", "avx512cd", "avx512vl", "avx512dq", "avx512bw" });
         }
         return isAVX512Supported;
+    }
+
+    // find the number of cores available, I will be able to see based on the oshi library how many threads are supported
+    public static int getAvailableProcessors() {
+        try {
+            return AccessController.doPrivileged(
+                (PrivilegedExceptionAction<Integer>) () -> { return Runtime.getRuntime().availableProcessors(); }
+            );
+        } catch (Exception e) {
+            logger.error("[KNN] Error finding the number of available processors. [{}]", e.getMessage(), e);
+            return 1;
+        }
     }
 
     public static boolean isAVX512SPRSupportedBySystem() {

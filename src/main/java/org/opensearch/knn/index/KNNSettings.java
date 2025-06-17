@@ -29,6 +29,7 @@ import org.opensearch.knn.index.engine.MemoryOptimizedSearchSupportSpec;
 import org.opensearch.knn.index.memory.NativeMemoryCacheManager;
 import org.opensearch.knn.index.memory.NativeMemoryCacheManagerDto;
 import org.opensearch.knn.index.util.IndexHyperParametersUtil;
+import org.opensearch.knn.jni.PlatformUtils;
 import org.opensearch.knn.quantization.models.quantizationState.QuantizationStateCacheManager;
 import org.opensearch.monitor.jvm.JvmInfo;
 import org.opensearch.monitor.os.OsProbe;
@@ -318,7 +319,7 @@ public class KNNSettings {
      */
     public static final Setting<Integer> KNN_ALGO_PARAM_INDEX_THREAD_QTY_SETTING = Setting.intSetting(
         KNN_ALGO_PARAM_INDEX_THREAD_QTY,
-        KNN_DEFAULT_ALGO_PARAM_INDEX_THREAD_QTY,
+        getHardwareDefaultIndexThreadQty(),
         1,
         INDEX_THREAD_QTY_MAX,
         NodeScope,
@@ -593,6 +594,10 @@ public class KNNSettings {
         });
         clusterService.getClusterSettings().addSettingsUpdateConsumer(QUANTIZATION_STATE_CACHE_EXPIRY_TIME_MINUTES_SETTING, it -> {
             quantizationStateCacheManager.rebuildCache();
+        });
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(KNN_ALGO_PARAM_INDEX_THREAD_QTY_SETTING, it -> {
+            log.info("Thread quantity setting updated to: " + it);
+            getIndexThreadQty(); // This will log the current thread quantity
         });
     }
 
@@ -1062,11 +1067,41 @@ public class KNNSettings {
     }
 
     /**
+     * Finds the suggested number of indexing threads based on the number of available processors
+     *enecccfnclgdgikknblvubbjvienhuuhgebhriudjgct
+     *
+     * @return suggested number of indexing threads
+     */
+    private static int getHardwareDefaultIndexThreadQty() {
+        log.info("Beginning of getHardwareDefaultIndexThreadQty()");
+        int totalPossible = PlatformUtils.getAvailableProcessors();
+        log.info("Finished computing the total possible threads: " + totalPossible);
+        int result = Math.max(1, totalPossible / 2);
+        log.info("getHardwareDefaultIndexThreadQty() returning " + result);
+
+        try {
+            if (INSTANCE != null) {
+                getIndexThreadQty();
+            } else {
+                log.info("SKIPPING OVER getIndexThreadQty() during initialization");
+                log.info("instance: " + INSTANCE);
+            }
+        } catch (Exception e) {
+            log.info("Couldn't call getIndexThreadQty() during initialization", e);
+        }
+
+        return result;
+    }
+
+    /**
      * Get the index thread quantity setting value from cluster setting.
      * @return int
      */
     public static int getIndexThreadQty() {
-        return KNNSettings.state().getSettingValue(KNN_ALGO_PARAM_INDEX_THREAD_QTY);
+        log.info("Beginning of getIndexThreadQty()");
+        int threadQty = KNNSettings.state().getSettingValue(KNN_ALGO_PARAM_INDEX_THREAD_QTY);
+        log.info("getIndexThreadQty() returning " + threadQty);
+        return threadQty;
     }
 
     private static String percentageAsString(Integer percentage) {

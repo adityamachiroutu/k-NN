@@ -595,10 +595,6 @@ public class KNNSettings {
         clusterService.getClusterSettings().addSettingsUpdateConsumer(QUANTIZATION_STATE_CACHE_EXPIRY_TIME_MINUTES_SETTING, it -> {
             quantizationStateCacheManager.rebuildCache();
         });
-        clusterService.getClusterSettings().addSettingsUpdateConsumer(KNN_ALGO_PARAM_INDEX_THREAD_QTY_SETTING, it -> {
-            log.info("Thread quantity setting updated to: " + it);
-            getIndexThreadQty(); // This will log the current thread quantity
-        });
     }
 
     /**

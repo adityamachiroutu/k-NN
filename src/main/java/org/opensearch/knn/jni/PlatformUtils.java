@@ -107,7 +107,10 @@ public class PlatformUtils {
         return isAVX512Supported;
     }
 
-    // find the number of cores available, I will be able to see based on the oshi library how many threads are supported
+    /**
+     * Finds the number of available processors on the system
+     * @return the number of available processors
+     */
     public static int getAvailableProcessors() {
         try {
             return AccessController.doPrivileged(

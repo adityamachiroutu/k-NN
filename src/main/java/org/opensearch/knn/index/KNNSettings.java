@@ -1069,24 +1069,8 @@ public class KNNSettings {
      * @return suggested number of indexing threads
      */
     private static int getHardwareDefaultIndexThreadQty() {
-        log.info("Beginning of getHardwareDefaultIndexThreadQty()");
         int totalPossible = PlatformUtils.getAvailableProcessors();
-        log.info("Finished computing the total possible threads: " + totalPossible);
-        int result = Math.max(1, totalPossible / 2);
-        log.info("getHardwareDefaultIndexThreadQty() returning " + result);
-
-        try {
-            if (INSTANCE != null) {
-                getIndexThreadQty();
-            } else {
-                log.info("SKIPPING OVER getIndexThreadQty() during initialization");
-                log.info("instance: " + INSTANCE);
-            }
-        } catch (Exception e) {
-            log.info("Couldn't call getIndexThreadQty() during initialization", e);
-        }
-
-        return result;
+        return Math.min(Math.max(1, totalPossible / 2), 32);
     }
 
     /**
@@ -1094,10 +1078,7 @@ public class KNNSettings {
      * @return int
      */
     public static int getIndexThreadQty() {
-        log.info("Beginning of getIndexThreadQty()");
-        int threadQty = KNNSettings.state().getSettingValue(KNN_ALGO_PARAM_INDEX_THREAD_QTY);
-        log.info("getIndexThreadQty() returning " + threadQty);
-        return threadQty;
+        return KNNSettings.state().getSettingValue(KNN_ALGO_PARAM_INDEX_THREAD_QTY);
     }
 
     private static String percentageAsString(Integer percentage) {

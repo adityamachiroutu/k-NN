@@ -6,6 +6,8 @@
 package org.opensearch.knn.index;
 
 import lombok.SneakyThrows;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.opensearch.action.admin.cluster.state.ClusterStateRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.settings.put.UpdateSettingsRequest;
@@ -16,6 +18,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.core.common.unit.ByteSizeValue;
 import org.opensearch.env.Environment;
 import org.opensearch.knn.KNNTestCase;
+import org.opensearch.knn.jni.PlatformUtils;
 import org.opensearch.knn.plugin.KNNPlugin;
 import org.opensearch.node.MockNode;
 import org.opensearch.node.Node;
@@ -24,9 +27,6 @@ import org.opensearch.plugins.Plugin;
 import org.opensearch.plugins.PluginInfo;
 import org.opensearch.test.InternalTestCluster;
 import org.opensearch.test.MockHttpTransport;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -225,14 +225,12 @@ public class KNNSettingsTests extends KNNTestCase {
 
     @SneakyThrows
     public void testIndexThreadQty_whenNoValueProvidedByUser_thenDefaultBasedOnCPUCores() {
-        // Save original processor count
-        int originalProcessors = Runtime.getRuntime().availableProcessors();
+        // Mock PlatformUtils.getAvailableProcessors() to return a specific value
+        try (MockedStatic<PlatformUtils> platformUtilsMock = Mockito.mockStatic(PlatformUtils.class)) {
+            // Set up the mock to return 8 processors
+            int mockedProcessorCount = 16;
+            platformUtilsMock.when(PlatformUtils::getAvailableProcessors).thenReturn(mockedProcessorCount);
 
-        // Mock the processor count using reflection
-        int mockedProcessors = 9; // Choose a specific number for testing
-        setMockedProcessorCount(mockedProcessors);
-
-        try {
             // Create a mock node with empty settings (no user-defined thread qty)
             Node mockNode = createMockNode(Collections.emptyMap());
             mockNode.start();
@@ -242,32 +240,14 @@ public class KNNSettingsTests extends KNNTestCase {
             // Get the actual thread quantity from settings
             int actualThreadQty = KNNSettings.getIndexThreadQty();
 
-            // Expected value should be based on our mocked processor count
-            int expectedThreadQty = Math.min(32, Math.max(1, mockedProcessors));
+            // Expected value should be based on our mocked processor count (8/2 = 4)
+            int expectedThreadQty = Math.min(Math.max(1, mockedProcessorCount / 2), 32);
 
             // Verify that the actual thread quantity matches the expected default
-            assertEquals("Thread quantity should be based on available CPU cores", expectedThreadQty, actualThreadQty);
+            assertEquals("Thread quantity should be based on mocked CPU cores", expectedThreadQty, actualThreadQty);
 
             mockNode.close();
-        } finally {
-            // Restore original processor count
-            setMockedProcessorCount(originalProcessors);
         }
-    }
-
-    @SneakyThrows
-    private void setMockedProcessorCount(int count) {
-        // Use reflection to modify the private field in Runtime class
-        Field field = Runtime.class.getDeclaredField("availableProcessors");
-        field.setAccessible(true);
-
-        // Remove final modifier
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-
-        // Set the mocked value
-        field.set(Runtime.getRuntime(), count);
     }
 
     @SneakyThrows

@@ -220,6 +220,67 @@ public class KNNSettingsTests extends KNNTestCase {
         assertEquals(3, threadQty);
     }
 
+    @SneakyThrows
+    public void testIndexThreadQty_whenNoValueProvidedByUser_thenDefaultBasedOnCPUCores() {
+        // Create a mock node with empty settings (no user-defined thread qty)
+        Node mockNode = createMockNode(Collections.emptyMap());
+        mockNode.start();
+        ClusterService clusterService = mockNode.injector().getInstance(ClusterService.class);
+        KNNSettings.state().setClusterService(clusterService);
+
+        // Get the actual thread quantity from settings
+        int actualThreadQty = KNNSettings.getIndexThreadQty();
+
+        // The actual value should be based on hardware but within valid range
+        assertTrue("Thread quantity should be at least 1", actualThreadQty >= 1);
+        assertTrue("Thread quantity should not exceed 32", actualThreadQty <= 32);
+
+        mockNode.close();
+    }
+
+    @SneakyThrows
+    public void testIndexThreadQty_whenNoValueProvidedByUser_thenDefaultIsWithinValidRange() {
+        // Create a mock node with empty settings (no user-defined thread qty)
+        Node mockNode = createMockNode(Collections.emptyMap());
+        mockNode.start();
+        ClusterService clusterService = mockNode.injector().getInstance(ClusterService.class);
+        KNNSettings.state().setClusterService(clusterService);
+
+        // Get the actual thread quantity from settings
+        int actualThreadQty = KNNSettings.getIndexThreadQty();
+
+        // The actual value should be within the valid range
+        assertTrue("Thread quantity should be at least 1", actualThreadQty >= 1);
+        assertTrue("Thread quantity should not exceed 32", actualThreadQty <= 32);
+
+        mockNode.close();
+    }
+
+    @SneakyThrows
+    public void testIndexThreadQty_whenValueProvidedByUser_thenUserValueIsUsed() {
+        int userDefinedThreadQty = 4;
+
+        // Create a mock node with user-defined thread quantity
+        Node mockNode = createMockNode(
+                Map.of(KNNSettings.KNN_ALGO_PARAM_INDEX_THREAD_QTY, Integer.toString(userDefinedThreadQty))
+        );
+        mockNode.start();
+        ClusterService clusterService = mockNode.injector().getInstance(ClusterService.class);
+        KNNSettings.state().setClusterService(clusterService);
+
+        // Get the actual thread quantity from settings
+        int actualThreadQty = KNNSettings.getIndexThreadQty();
+        mockNode.close();
+
+        // The thread quantity should match the user-defined value
+        assertEquals(userDefinedThreadQty, actualThreadQty);
+    }
+
+
+
+
+
+
     private Node createMockNode(Map<String, Object> configSettings) throws IOException {
         Path configDir = createTempDir();
         File configFile = configDir.resolve("opensearch.yml").toFile();

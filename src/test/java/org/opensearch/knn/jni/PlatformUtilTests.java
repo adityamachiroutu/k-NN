@@ -23,7 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.stream.Stream;
 
-import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.*;
 import static org.opensearch.knn.jni.PlatformUtils.isAVX2SupportedBySystem;
 import static org.opensearch.knn.jni.PlatformUtils.isAVX512SupportedBySystem;
 import static org.opensearch.knn.jni.PlatformUtils.isAVX512SPRSupportedBySystem;
@@ -264,6 +264,27 @@ public class PlatformUtilTests extends Assert {
                     .thenReturn(Stream.of("flags: avx512_fp16 avx512_vpopcntdq", "dummy string"));
                 assertFalse(isAVX512SPRSupportedBySystem());
             }
+        }
+    }
+
+    @Test
+    public void testGetAvailableProcessors_returnsRuntimeValue() {
+        try (MockedStatic<Runtime> mockedRuntime = mockStatic(Runtime.class)) {
+            Runtime mockRuntime = mock(Runtime.class);
+            mockedRuntime.when(Runtime::getRuntime).thenReturn(mockRuntime);
+            when(mockRuntime.availableProcessors()).thenReturn(8);
+
+            assertEquals(8, PlatformUtils.getAvailableProcessors());
+        }
+    }
+
+
+    @Test
+    public void testGetAvailableProcessors_whenExceptionOccurs_returnsOne() {
+        try (MockedStatic<Runtime> mockedRuntime = mockStatic(Runtime.class)) {
+            mockedRuntime.when(Runtime::getRuntime).thenThrow(SecurityException.class);
+
+            assertEquals(1, PlatformUtils.getAvailableProcessors());
         }
     }
 }

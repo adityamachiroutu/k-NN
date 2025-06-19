@@ -268,17 +268,6 @@ public class PlatformUtilTests extends Assert {
     }
 
     @Test
-    public void testGetAvailableProcessors_returnsRuntimeValue() {
-        try (MockedStatic<Runtime> mockedRuntime = mockStatic(Runtime.class)) {
-            Runtime mockRuntime = mock(Runtime.class);
-            mockedRuntime.when(Runtime::getRuntime).thenReturn(mockRuntime);
-            mockedRuntime.when(() -> Runtime.getRuntime().availableProcessors()).thenReturn(8);
-
-            assertEquals(8, PlatformUtils.getAvailableProcessors());
-        }
-    }
-
-    @Test
     public void testGetAvailableProcessors_whenExceptionOccurs_returnsOne() {
         try (MockedStatic<Runtime> mockedRuntime = mockStatic(Runtime.class)) {
             mockedRuntime.when(Runtime::getRuntime).thenThrow(SecurityException.class);
@@ -286,4 +275,16 @@ public class PlatformUtilTests extends Assert {
             assertEquals(1, PlatformUtils.getAvailableProcessors());
         }
     }
+
+    @Test
+    public void testGetAvailableProcessors_returnsRuntimeValue() {
+        try (MockedStatic<Runtime> mockedRuntime = mockStatic(Runtime.class)) {
+            Runtime mockRuntime = mock(Runtime.class);
+            when(mockRuntime.availableProcessors()).thenReturn(8);
+            mockedRuntime.when(Runtime::getRuntime).thenReturn(mockRuntime);
+
+            assertEquals(8, PlatformUtils.getAvailableProcessors());
+        }
+    }
+
 }

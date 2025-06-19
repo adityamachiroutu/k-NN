@@ -25,6 +25,9 @@ import org.opensearch.plugins.PluginInfo;
 import org.opensearch.test.InternalTestCluster;
 import org.opensearch.test.MockHttpTransport;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -222,20 +225,49 @@ public class KNNSettingsTests extends KNNTestCase {
 
     @SneakyThrows
     public void testIndexThreadQty_whenNoValueProvidedByUser_thenDefaultBasedOnCPUCores() {
-        // Create a mock node with empty settings (no user-defined thread qty)
-        Node mockNode = createMockNode(Collections.emptyMap());
-        mockNode.start();
-        ClusterService clusterService = mockNode.injector().getInstance(ClusterService.class);
-        KNNSettings.state().setClusterService(clusterService);
+        // Save original processor count
+        int originalProcessors = Runtime.getRuntime().availableProcessors();
 
-        // Get the actual thread quantity from settings
-        int actualThreadQty = KNNSettings.getIndexThreadQty();
+        // Mock the processor count using reflection
+        int mockedProcessors = 9; // Choose a specific number for testing
+        setMockedProcessorCount(mockedProcessors);
 
-        // The actual value should be based on hardware but within valid range
-        assertTrue("Thread quantity should be at least 1", actualThreadQty >= 1);
-        assertTrue("Thread quantity should not exceed 32", actualThreadQty <= 32);
+        try {
+            // Create a mock node with empty settings (no user-defined thread qty)
+            Node mockNode = createMockNode(Collections.emptyMap());
+            mockNode.start();
+            ClusterService clusterService = mockNode.injector().getInstance(ClusterService.class);
+            KNNSettings.state().setClusterService(clusterService);
 
-        mockNode.close();
+            // Get the actual thread quantity from settings
+            int actualThreadQty = KNNSettings.getIndexThreadQty();
+
+            // Expected value should be based on our mocked processor count
+            int expectedThreadQty = Math.min(32, Math.max(1, mockedProcessors));
+
+            // Verify that the actual thread quantity matches the expected default
+            assertEquals("Thread quantity should be based on available CPU cores", expectedThreadQty, actualThreadQty);
+
+            mockNode.close();
+        } finally {
+            // Restore original processor count
+            setMockedProcessorCount(originalProcessors);
+        }
+    }
+
+    @SneakyThrows
+    private void setMockedProcessorCount(int count) {
+        // Use reflection to modify the private field in Runtime class
+        Field field = Runtime.class.getDeclaredField("availableProcessors");
+        field.setAccessible(true);
+
+        // Remove final modifier
+        Field modifiersField = Field.class.getDeclaredField("modifiers");
+        modifiersField.setAccessible(true);
+        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+
+        // Set the mocked value
+        field.set(Runtime.getRuntime(), count);
     }
 
     @SneakyThrows

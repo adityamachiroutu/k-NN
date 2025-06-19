@@ -261,9 +261,7 @@ public class KNNSettingsTests extends KNNTestCase {
         int userDefinedThreadQty = 4;
 
         // Create a mock node with user-defined thread quantity
-        Node mockNode = createMockNode(
-                Map.of(KNNSettings.KNN_ALGO_PARAM_INDEX_THREAD_QTY, Integer.toString(userDefinedThreadQty))
-        );
+        Node mockNode = createMockNode(Map.of(KNNSettings.KNN_ALGO_PARAM_INDEX_THREAD_QTY, Integer.toString(userDefinedThreadQty)));
         mockNode.start();
         ClusterService clusterService = mockNode.injector().getInstance(ClusterService.class);
         KNNSettings.state().setClusterService(clusterService);
@@ -275,11 +273,6 @@ public class KNNSettingsTests extends KNNTestCase {
         // The thread quantity should match the user-defined value
         assertEquals(userDefinedThreadQty, actualThreadQty);
     }
-
-
-
-
-
 
     private Node createMockNode(Map<String, Object> configSettings) throws IOException {
         Path configDir = createTempDir();

@@ -273,7 +273,7 @@ public class PlatformUtilTests extends Assert {
             Runtime mockRuntime = mock(Runtime.class);
             mockedRuntime.when(Runtime::getRuntime).thenReturn(mockRuntime);
             mockedRuntime.when(() -> Runtime.getRuntime().availableProcessors()).thenReturn(8);
-            
+
             assertEquals(8, PlatformUtils.getAvailableProcessors());
         }
     }

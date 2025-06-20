@@ -1068,7 +1068,7 @@ public class KNNSettings {
      *
      * @return suggested number of indexing threads
      */
-    private static int getHardwareDefaultIndexThreadQty() {
+    public static int getHardwareDefaultIndexThreadQty() {
         int totalPossible = PlatformUtils.getAvailableProcessors();
         return Math.min(Math.max(1, totalPossible / 2), 32);
     }

@@ -112,14 +112,17 @@ public class PlatformUtils {
      * @return the number of available processors
      */
     public static int getAvailableProcessors() {
+
         try {
             return AccessController.doPrivileged(
                 (PrivilegedExceptionAction<Integer>) () -> { return Runtime.getRuntime().availableProcessors(); }
             );
+
         } catch (Exception e) {
             logger.error("[KNN] Error finding the number of available processors. [{}]", e.getMessage(), e);
             return 1;
         }
+
     }
 
     public static boolean isAVX512SPRSupportedBySystem() {

@@ -13,6 +13,7 @@ package org.opensearch.knn.jni;
 
 import com.sun.jna.Platform;
 
+import lombok.extern.log4j.Log4j2;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,6 +29,7 @@ import static org.opensearch.knn.jni.PlatformUtils.isAVX2SupportedBySystem;
 import static org.opensearch.knn.jni.PlatformUtils.isAVX512SupportedBySystem;
 import static org.opensearch.knn.jni.PlatformUtils.isAVX512SPRSupportedBySystem;
 
+@Log4j2
 public class PlatformUtilTests extends Assert {
     public static final String MAC_CPU_FEATURES = "machdep.cpu.leaf7_features";
     public static final String LINUX_PROC_CPU_INFO = "/proc/cpuinfo";
@@ -264,6 +266,37 @@ public class PlatformUtilTests extends Assert {
                     .thenReturn(Stream.of("flags: avx512_fp16 avx512_vpopcntdq", "dummy string"));
                 assertFalse(isAVX512SPRSupportedBySystem());
             }
+        }
+    }
+
+    @Test
+    public void testGetAvailableProcessors_whenExceptionOccurs_returnsOne() {
+        try (MockedStatic<Runtime> mockedRuntime = mockStatic(Runtime.class)) {
+            mockedRuntime.when(Runtime::getRuntime).thenThrow(SecurityException.class);
+
+            assertEquals(1, PlatformUtils.getAvailableProcessors());
+        }
+    }
+
+    @Test
+    public void testGetAvailableProcessors_returnsRuntimeValue() {
+        try (
+            MockedStatic<Runtime> mockedRuntime = mockStatic(Runtime.class);
+            MockedStatic<PlatformUtils> mockedPlatformUtils = mockStatic(PlatformUtils.class, invocation -> {
+                if (invocation.getMethod().getName().equals("getNativeProcessorCount")) {
+                    throw new SecurityException();
+                }
+                return invocation.callRealMethod();
+            })
+        ) {
+
+            Runtime mockRuntime = mock(Runtime.class);
+            mockedRuntime.when(Runtime::getRuntime).thenReturn(mockRuntime);
+            when(mockRuntime.availableProcessors()).thenReturn(7);
+
+            mockedPlatformUtils.when(() -> PlatformUtils.getAvailableProcessors()).thenCallRealMethod();
+
+            assertEquals(7, PlatformUtils.getAvailableProcessors());
         }
     }
 

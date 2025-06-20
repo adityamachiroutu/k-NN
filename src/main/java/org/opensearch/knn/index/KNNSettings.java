@@ -29,13 +29,14 @@ import org.opensearch.knn.index.engine.MemoryOptimizedSearchSupportSpec;
 import org.opensearch.knn.index.memory.NativeMemoryCacheManager;
 import org.opensearch.knn.index.memory.NativeMemoryCacheManagerDto;
 import org.opensearch.knn.index.util.IndexHyperParametersUtil;
-import org.opensearch.knn.jni.PlatformUtils;
 import org.opensearch.knn.quantization.models.quantizationState.QuantizationStateCacheManager;
 import org.opensearch.monitor.jvm.JvmInfo;
 import org.opensearch.monitor.os.OsProbe;
 import org.opensearch.transport.client.Client;
 
+import java.security.AccessController;
 import java.security.InvalidParameterException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -1064,13 +1065,19 @@ public class KNNSettings {
 
     /**
      * Finds the suggested number of indexing threads based on the number of available processors
-     *enecccfnclgdgikknblvubbjvienhuuhgebhriudjgct
      *
      * @return suggested number of indexing threads
      */
     public static int getHardwareDefaultIndexThreadQty() {
-        int totalPossible = PlatformUtils.getAvailableProcessors();
-        return Math.min(Math.max(1, totalPossible / 2), 32);
+        try {
+            return AccessController.doPrivileged((PrivilegedExceptionAction<Integer>) () -> {
+                int availableProcessors = Runtime.getRuntime().availableProcessors();
+                return Math.min(Math.max(1, availableProcessors / 2), 32);
+            });
+        } catch (Exception e) {
+            logger.info("[KNN] Failed to determine available processors. Defaulting to 1. [{}]", e.getMessage(), e);
+            return 1;
+        }
     }
 
     /**

@@ -269,35 +269,4 @@ public class PlatformUtilTests extends Assert {
         }
     }
 
-    @Test
-    public void testGetAvailableProcessors_whenExceptionOccurs_returnsOne() {
-        try (MockedStatic<Runtime> mockedRuntime = mockStatic(Runtime.class)) {
-            mockedRuntime.when(Runtime::getRuntime).thenThrow(SecurityException.class);
-
-            assertEquals(1, PlatformUtils.getAvailableProcessors());
-        }
-    }
-
-    @Test
-    public void testGetAvailableProcessors_returnsRuntimeValue() {
-        try (
-            MockedStatic<Runtime> mockedRuntime = mockStatic(Runtime.class);
-            MockedStatic<PlatformUtils> mockedPlatformUtils = mockStatic(PlatformUtils.class, invocation -> {
-                if (invocation.getMethod().getName().equals("getNativeProcessorCount")) {
-                    throw new SecurityException();
-                }
-                return invocation.callRealMethod();
-            })
-        ) {
-
-            Runtime mockRuntime = mock(Runtime.class);
-            mockedRuntime.when(Runtime::getRuntime).thenReturn(mockRuntime);
-            when(mockRuntime.availableProcessors()).thenReturn(7);
-
-            mockedPlatformUtils.when(() -> PlatformUtils.getAvailableProcessors()).thenCallRealMethod();
-
-            assertEquals(7, PlatformUtils.getAvailableProcessors());
-        }
-    }
-
 }

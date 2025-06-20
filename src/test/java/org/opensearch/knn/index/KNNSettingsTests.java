@@ -6,8 +6,6 @@
 package org.opensearch.knn.index;
 
 import lombok.SneakyThrows;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.opensearch.action.admin.cluster.state.ClusterStateRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.settings.put.UpdateSettingsRequest;
@@ -18,7 +16,6 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.core.common.unit.ByteSizeValue;
 import org.opensearch.env.Environment;
 import org.opensearch.knn.KNNTestCase;
-import org.opensearch.knn.jni.PlatformUtils;
 import org.opensearch.knn.plugin.KNNPlugin;
 import org.opensearch.node.MockNode;
 import org.opensearch.node.Node;
@@ -268,35 +265,33 @@ public class KNNSettingsTests extends KNNTestCase {
     }
 
     @SneakyThrows
-    public void testIndexThreadQty_whenNoValueProvidedByUser_thenDefaultBasedOnCPUCores() {
-        int mockedProcessorCount = 12;
+    public void testIndexThreadQty_whenNoValueProvidedByUser_thenDefaultBasedOnAvailableProcessors() {
+        // Create a mock node with no user-defined settings
+        Node mockNode = createMockNode(Collections.emptyMap());
+        mockNode.start();
 
-        try (MockedStatic<PlatformUtils> platformUtilsMock = Mockito.mockStatic(PlatformUtils.class)) {
-            platformUtilsMock.when(PlatformUtils::getAvailableProcessors).thenReturn(mockedProcessorCount);
-            Node mockNode = createMockNode(Collections.emptyMap());
-            mockNode.start();
-            ClusterService clusterService = mockNode.injector().getInstance(ClusterService.class);
-            KNNSettings.state().setClusterService(clusterService);
+        ClusterService clusterService = mockNode.injector().getInstance(ClusterService.class);
+        KNNSettings.state().setClusterService(clusterService);
 
-            int actualThreadQty = KNNSettings.getHardwareDefaultIndexThreadQty();
-            int expectedThreadQty = Math.min(Math.max(1, mockedProcessorCount / 2), 32);
+        int availableProcessors = Runtime.getRuntime().availableProcessors();
+        int expectedThreadQty = Math.min(Math.max(1, availableProcessors / 2), 32);
+        int actualThreadQty = KNNSettings.getHardwareDefaultIndexThreadQty();
 
-            assertEquals(expectedThreadQty, actualThreadQty);
+        assertEquals(expectedThreadQty, actualThreadQty);
 
-            mockNode.close();
-        }
+        mockNode.close();
     }
 
     @SneakyThrows
     public void testIndexThreadQty_whenNoValueProvidedByUser_thenDefaultIsWithinValidRange() {
-        // Create a mock node with empty settings (no user-defined thread qty)
         Node mockNode = createMockNode(Collections.emptyMap());
         mockNode.start();
+
         ClusterService clusterService = mockNode.injector().getInstance(ClusterService.class);
         KNNSettings.state().setClusterService(clusterService);
 
-        // Get the actual thread quantity from settings
         int actualThreadQty = KNNSettings.getIndexThreadQty();
+
         assertTrue("Thread quantity should be at least 1", actualThreadQty >= 1);
         assertTrue("Thread quantity should not exceed 32", actualThreadQty <= 32);
 
@@ -307,17 +302,19 @@ public class KNNSettingsTests extends KNNTestCase {
     public void testIndexThreadQty_whenValueProvidedByUser_thenUserValueIsUsed() {
         int userDefinedThreadQty = 4;
 
-        // Create a mock node with user-defined thread quantity
-        Node mockNode = createMockNode(Map.of(KNNSettings.KNN_ALGO_PARAM_INDEX_THREAD_QTY, Integer.toString(userDefinedThreadQty)));
+        Node mockNode = createMockNode(Map.of(
+                KNNSettings.KNN_ALGO_PARAM_INDEX_THREAD_QTY,
+                Integer.toString(userDefinedThreadQty)
+        ));
         mockNode.start();
+
         ClusterService clusterService = mockNode.injector().getInstance(ClusterService.class);
         KNNSettings.state().setClusterService(clusterService);
 
-        // Get the actual thread quantity from settings
         int actualThreadQty = KNNSettings.getIndexThreadQty();
-        mockNode.close();
 
-        // The thread quantity should match the user-defined value
         assertEquals(userDefinedThreadQty, actualThreadQty);
+
+        mockNode.close();
     }
 }

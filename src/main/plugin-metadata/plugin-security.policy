@@ -8,9 +8,4 @@ grant {
     permission java.net.SocketPermission "*", "connect,resolve";
     permission java.lang.RuntimePermission "accessDeclaredMembers";
     permission java.io.FilePermission "/proc/cpuinfo", "read";
-
-
-    permission java.lang.RuntimePermission "getAvailableProcessors";
-    permission java.lang.RuntimePermission "testGetAvailableProcessors_returnsRuntimeValue";
-    permission java.lang.RuntimePermission "testGetAvailableProcessors_whenExceptionOccurs_returnsOne";
 };

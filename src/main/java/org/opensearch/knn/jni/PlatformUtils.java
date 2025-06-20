@@ -107,24 +107,6 @@ public class PlatformUtils {
         return isAVX512Supported;
     }
 
-    /**
-     * Finds the number of available processors on the system
-     * @return the number of available processors
-     */
-    public static int getAvailableProcessors() {
-
-        try {
-            return AccessController.doPrivileged(
-                (PrivilegedExceptionAction<Integer>) () -> { return Runtime.getRuntime().availableProcessors(); }
-            );
-
-        } catch (Exception e) {
-            logger.error("[KNN] Error finding the number of available processors. [{}]", e.getMessage(), e);
-            return 1;
-        }
-
-    }
-
     public static boolean isAVX512SPRSupportedBySystem() {
         if (isAVX512SPRSupported == null) {
             isAVX512SPRSupported = areAVX512FlagsAvailable(new String[] { "avx512_fp16", "avx512_bf16", "avx512_vpopcntdq" });

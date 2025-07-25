@@ -1072,7 +1072,12 @@ public class KNNSettings {
         try {
             return AccessController.doPrivileged((PrivilegedExceptionAction<Integer>) () -> {
                 int availableProcessors = Runtime.getRuntime().availableProcessors();
-                return Math.min(Math.max(1, availableProcessors / 2), 32);
+                if(availableProcessors > 32) {
+                    return 4;
+                }
+                else {
+                    return 1;
+                }
             });
         } catch (Exception e) {
             logger.info("[KNN] Failed to determine available processors. Defaulting to 1. [{}]", e.getMessage(), e);
